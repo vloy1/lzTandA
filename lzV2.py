@@ -35,6 +35,12 @@ avax = {
     'gas': 410000
 }
 
+op = {
+    'name':'OP',
+    'RPC':'https://rpc.ankr.com/optimism',
+    'stargate': '0xb49c4e680174e331cb0a7ff3ab58afc9738d5f8b',
+}
+
 def apruve(ak): #работает 
     try:
         w3 = Web3(Web3.HTTPProvider(avax['RPC'])) 
@@ -154,6 +160,42 @@ def st(set1,ak):
         print(f'{set1} нехватка газа')
         print(f'выполнен перевод {balanse} USDT из {a1} в {a2}')
         return 0 
+    
+def st1(set1,ak):
+    w3 = Web3(Web3.HTTPProvider(set1['RPC']))
+    contractToken = Web3.to_checksum_address(set1['stargate'])
+    contract = w3.eth.contract(address=contractToken, abi='[{"inputs":[{"internalType":"address","name":"_stargateEthVault","type":"address"},{"internalType":"address","name":"_stargateRouter","type":"address"},{"internalType":"uint16","name":"_poolId","type":"uint16"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"addLiquidityETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"poolId","outputs":[{"internalType":"uint16","name":"","type":"uint16"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"stargateEthVault","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"stargateRouter","outputs":[{"internalType":"contract IStargateRouter","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint16","name":"_dstChainId","type":"uint16"},{"internalType":"address payable","name":"_refundAddress","type":"address"},{"internalType":"bytes","name":"_toAddress","type":"bytes"},{"internalType":"uint256","name":"_amountLD","type":"uint256"},{"internalType":"uint256","name":"_minAmountLD","type":"uint256"}],"name":"swapETH","outputs":[],"stateMutability":"payable","type":"function"},{"stateMutability":"payable","type":"receive"}]')
+    nonce = w3.eth.get_transaction_count(ak[0])
+    gas_price = w3.eth.gas_price
+    monet = int((w3.eth.get_balance(ak[0]))*0.95)
+    monet_min = int(monet *0.5)
+
+    tx = contract.functions.swapETH(
+        110,
+        ak[0],
+        ak[0],
+        monet_min,
+        0
+    ).build_transaction(
+        {
+        'from': ak[0],
+        'value': monet, 
+        'gas': 600000,
+        'gasPrice': gas_price,
+        'nonce': nonce,
+        })
+
+    signed_txn = w3.eth.account.sign_transaction(tx, private_key=ak[1])
+    tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+    time.sleep(5)
+    f = status(tx_hash,set1)
+    a1 = set1['name']
+    if f != 0 :
+        a2 = 'Arbitrum'
+        print(f'выполнен перевод из {a1} в {a2} , {f}')
+        return f
+    else:
+        return f 
 
 def wallett():
     try:
@@ -171,7 +213,7 @@ def wallett_del():
 
 def wallet_aptos():
     wi = open('walet_aptos.txt','r').readlines()
-    w = wi[00]
+    w = wi[00].rstrip()
     del wi[00]
     with open('walet_aptos.txt','w') as file:
         file.writelines(wi)
@@ -201,15 +243,16 @@ def aptos(ak): ########### gotov
     nonce = w3.eth.get_transaction_count(ak[0])
     gas_price = w3.eth.gas_price
     amointIn = random.randint(10000000000000,90000000000000)
-    value = (amointIn/10**18 + 0.00031)
-    value = Web3.to_wei(value, 'ether')
+    value1 = (amointIn/10**18 + 0.00031)
+    value = Web3.to_wei(value1, 'ether')
     aptos_adres = wallet_aptos()
+    ap = aptos_adres[2:]
     tx = contract.functions.sendETHToAptos(
         aptos_adres,
         amointIn,
         [ak[0],
         '0x0000000000000000000000000000000000000000'],
-        f'0x00020000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000007f0d0{aptos_adres[2:]}'
+        f'0x00020000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000007f0d0{ap}'
     ).build_transaction(
         {
         'from': ak[0],   
@@ -294,7 +337,7 @@ def send_btc(ak): #работает но с газом проблемы
     ).build_transaction(
         {
         'from': ak[0],
-        'value': 5000000000000000, 
+        'value': 6500000000000000, 
         'gas': 400000,
         'gasPrice': gas_price,
         'nonce': nonce,
@@ -363,6 +406,7 @@ def buy_usdt(ak): #протестировать
 def ran(ak):
     wal = aka(ak)
     print(wal[0])
+    st1(op,wal)
     aptos(wal)
     time.sleep(t)
     goerli(wal)
